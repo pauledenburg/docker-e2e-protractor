@@ -51,9 +51,9 @@ RUN apt-get update -qqy \
 
 RUN sudo apt-mark hold firefox
 
-# Clean clears out the local repository of retrieved package files. Run apt-get clean from time to time to free up disk space.
-RUN apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+# Install composer
+RUN curl --silent -o /usr/local/bin/composer https://getcomposer.org/composer.phar && \
+  chmod a+x /usr/local/bin/composer
 
 # 1. Step to fixing the error for Node.js native addon build tool (node-gyp)
 # https://github.com/nodejs/node-gyp/issues/454
@@ -62,7 +62,8 @@ RUN rm -fr /root/tmp
 # Jasmine and protractor global install
 # 2. Step to fixing the error for Node.js native addon build tool (node-gyp)
 # https://github.com/nodejs/node-gyp/issues/454
-RUN npm install --unsafe-perm -g protractor \
+RUN npm install --unsafe-perm -g \
+  protractor \
 # Get the latest Google Chrome driver
   && npm update \
 # Get the latest WebDriver Manager
@@ -73,20 +74,37 @@ RUN npm install --unsafe-perm -g protractor \
 # https://docs.npmjs.com/getting-started/fixing-npm-permissions
 ENV NODE_PATH /usr/lib/node_modules
 # Global reporters for protractor
-RUN npm install --unsafe-perm -g \
-    jasmine-reporters \
-    jasmine-spec-reporter \
-    protractor-jasmine2-html-reporter \
-    jasmine-allure-reporter \
-    protractor-console
+#RUN npm install --unsafe-perm -g \
+#    jasmine-reporters \
+#    jasmine-spec-reporter \
+#    protractor-jasmine2-html-reporter \
+#    jasmine-allure-reporter \
+#    protractor-console
+
+# Install PHP and needed extensionx
+RUN apt-get update -qqy \
+  && apt-get -qqy install \
+  php \
+  curl \
+  php-mbstring \
+  php-curl \
+  php-dom
+
+# Clean clears out the local repository of retrieved package files. Run apt-get clean from time to time to free up disk space.
+RUN apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
-WORKDIR /protractor/
+WORKDIR /project
+
 # Copy the run sript/s from local folder to the container's related folder
 COPY /scripts/run-e2e-tests.sh /entrypoint.sh
+
 # Set the HOME environment variable for the test project
-ENV HOME=/protractor/project
+ENV HOME=/project
+
 # Set the file access permissions (read, write and access) recursively for the new folders
 RUN chmod -Rf 777 .
+
 # Container entry point
 ENTRYPOINT ["/entrypoint.sh"]
